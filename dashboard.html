@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NIFTY 50 AI Bolt Dashboard • Groww</title>
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: #111827;
+      --card-border: #1f2937;
+      --primary: #00d09c; /* Groww Green */
+      --primary-glow: rgba(0, 208, 156, 0.25);
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --blue: #3b82f6;
+      --text: #f9fafb;
+      --text-muted: #9ca3af;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding: 18px; min-height: 100vh; }
+    .container { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+
+    /* Header */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      padding: 16px 20px;
+      border-radius: 12px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-logo {
+      width: 36px; height: 36px; background: linear-gradient(135deg, #00d09c, #00b386);
+      border-radius: 8px; display: flex; align-items: center; justify-content: center;
+      font-weight: 800; color: #000; font-size: 20px;
+    }
+    .brand-title h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; }
+    .brand-title p { font-size: 12px; color: var(--text-muted); }
+    .header-right { display: flex; align-items: center; gap: 14px; }
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px;
+      border-radius: 20px; font-size: 12px; font-weight: 600; text-transform: uppercase;
+      background: #1f2937; color: var(--text-muted); border: 1px solid #374151;
+    }
+    .status-badge.live { background: rgba(0, 208, 156, 0.15); color: var(--primary); border-color: var(--primary); }
+    .status-badge.live .dot { background: var(--primary); box-shadow: 0 0 8px var(--primary); }
+    .status-badge .dot { width: 8px; height: 8px; border-radius: 50%; background: #6b7280; }
+    .clock { font-size: 13px; font-weight: 600; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+    /* Control Panel */
+    .controls-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
+    button {
+      padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 600;
+      cursor: pointer; border: none; transition: all 0.15s ease; display: inline-flex;
+      align-items: center; gap: 8px;
+    }
+    .btn-primary { background: var(--primary); color: #000; }
+    .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+    .btn-danger { background: #dc2626; color: #fff; }
+    .btn-danger:hover { filter: brightness(1.1); }
+    .btn-secondary { background: #1f2937; color: var(--text); border: 1px solid #374151; }
+    .btn-secondary:hover { background: #374151; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Hero Signal Banner (Groww Trade Execution Card) */
+    .signal-banner {
+      display: none;
+      background: linear-gradient(145deg, #064e3b, #0f172a);
+      border: 2px solid var(--primary);
+      box-shadow: 0 0 24px var(--primary-glow);
+      border-radius: 14px;
+      padding: 20px;
+      animation: pulse-glow 2s infinite;
+    }
+    .signal-banner.active { display: block; }
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 20px var(--primary-glow); }
+      50% { box-shadow: 0 0 35px rgba(0, 208, 156, 0.45); }
+    }
+    .signal-header {
+      display: flex; justify-content: space-between; align-items: center;
+      border-bottom: 1px solid rgba(0, 208, 156, 0.25); padding-bottom: 12px; margin-bottom: 14px;
+    }
+    .signal-title { font-size: 20px; font-weight: 800; color: var(--primary); }
+    .copy-pill {
+      background: rgba(0, 208, 156, 0.2); border: 1px dashed var(--primary);
+      padding: 6px 14px; border-radius: 6px; font-size: 14px; font-weight: 700;
+      color: #fff; cursor: pointer; user-select: all;
+    }
+    .copy-pill:hover { background: var(--primary); color: #000; }
+    .signal-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px; margin-top: 10px;
+    }
+    .signal-cell {
+      background: rgba(0, 0, 0, 0.35); padding: 10px 14px; border-radius: 8px;
+    }
+    .signal-cell .label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 600; }
+    .signal-cell .val { font-size: 16px; font-weight: 700; margin-top: 4px; }
+
+    /* Grid Layout */
+    .dashboard-grid {
+      display: grid; grid-template-columns: 2fr 1fr; gap: 16px;
+    }
+    @media (max-width: 900px) { .dashboard-grid { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 12px; padding: 18px;
+    }
+    .card-title {
+      font-size: 14px; font-weight: 700; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 14px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+
+    /* Market Metrics */
+    .metrics-row {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 10px;
+    }
+    .metric-box {
+      background: #0d131f; border: 1px solid #1e293b; border-radius: 8px;
+      padding: 12px; text-align: left;
+    }
+    .metric-label { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
+    .metric-val { font-size: 18px; font-weight: 800; margin-top: 4px; }
+    .bullish { color: var(--primary); }
+    .bearish { color: var(--danger); }
+    .neutral { color: var(--warning); }
+
+    /* AI Confidence Meter */
+    .ai-meter-box {
+      background: #0d131f; border: 1px solid #1e293b; border-radius: 10px;
+      padding: 14px; margin-top: 14px;
+    }
+    .ai-bar-wrap {
+      background: #1f2937; height: 12px; border-radius: 6px; overflow: hidden;
+      margin: 8px 0; position: relative;
+    }
+    .ai-bar-fill {
+      height: 100%; width: 0%; background: linear-gradient(90deg, #3b82f6, #00d09c);
+      transition: width 0.5s ease;
+    }
+    .ai-labels { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; }
+
+    /* Active Position Card */
+    .position-box {
+      background: #0d131f; border: 1px solid #1e293b; border-radius: 10px;
+      padding: 14px; margin-top: 10px;
+    }
+    .pos-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .pos-pnl { font-size: 24px; font-weight: 900; }
+
+    /* PnL and Stats Card */
+    .pnl-big { font-size: 28px; font-weight: 900; margin-bottom: 12px; }
+    .stat-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #1f2937; font-size: 13px; }
+
+    /* Live Event Logs */
+    .log-box {
+      background: #050811; border: 1px solid #1e293b; border-radius: 8px;
+      height: 220px; overflow-y: auto; padding: 10px 14px; font-family: monospace;
+      font-size: 12px; line-height: 1.6;
+    }
+    .log-entry { margin-bottom: 4px; word-break: break-all; }
+    .log-time { color: #64748b; margin-right: 8px; }
+    .log-info { color: #94a3b8; }
+    .log-success { color: var(--primary); font-weight: 600; }
+    .log-warn { color: var(--warning); }
+    .log-error { color: var(--danger); font-weight: 600; }
+
+    /* Table */
+    table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+    th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #1f2937; }
+    th { color: var(--text-muted); font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <div class="brand">
+        <div class="brand-logo">G</div>
+        <div class="brand-title">
+          <h1>NIFTY 50 • AI Bolt Dashboard</h1>
+          <p>Groww Option 1 • <span style="color:#38bdf8; font-weight:600;">⚡ Direct NSE India Exchange Feed</span> • Active Expiry: <strong id="hdrExpiryText" style="color:#34d399;">01 Dec 2026</strong></p>
+        </div>
+      </div>
+      <div class="header-right">
+        <div id="statusBadge" class="status-badge">
+          <span class="dot"></span>
+          <span id="statusText">IDLE</span>
+        </div>
+        <div class="clock" id="liveClock">--:--:-- IST</div>
+      </div>
+    </header>
+
+    <!-- Controls Bar -->
+    <div class="controls-card">
+      <div class="btn-group">
+        <button id="btnStart" class="btn-primary" onclick="doAction('start_live')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Start Live Groww Bot
+        </button>
+        <button id="btnScan" class="btn-secondary" style="background: linear-gradient(135deg, #1e3a8a, #2563eb); color: #fff; border-color: #3b82f6;" onclick="doAction('scan_now')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/></svg>
+          ⚡ Instant AI Trade Scan (Now)
+        </button>
+        <button id="btnStop" class="btn-danger" onclick="doAction('stop')" disabled>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12"/></svg>
+          Stop Bot
+        </button>
+        <button id="btnCheck" class="btn-secondary" onclick="doAction('check_groww')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Groww Pre-Check
+        </button>
+        <button id="btnDemo" class="btn-secondary" onclick="doAction('run_demo')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Test Demo Signal
+        </button>
+      </div>
+      <div style="font-size: 12px; color: var(--text-muted);">
+        Capital: <strong style="color:#fff">₹5,000</strong> &nbsp;|&nbsp; Lot Size: <strong style="color:#fff">65</strong> &nbsp;|&nbsp; Max Trades: <strong style="color:#fff">1 / day</strong>
+      </div>
+    </div>
+
+    <!-- Anytime 10-Minute Window & Capital Shield Box -->
+    <div id="scanWindowBox" style="background: rgba(15, 23, 42, 0.75); border: 1px solid #1e293b; border-radius: 10px; padding: 12px 16px; margin-top: 14px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 11px; background: rgba(59, 130, 246, 0.2); color: #93c5fd; border: 1px solid #3b82f6; padding: 3px 8px; border-radius: 4px; font-weight: 700;">
+            ⏱️ ANYTIME 10-MIN WINDOW
+          </span>
+          <strong id="winTimeRange" style="color: #fff; font-size: 14px;">Click "⚡ Instant AI Trade Scan (Now)" to analyze the current window</strong>
+        </div>
+        <div id="winStatusBadge" style="font-size: 11px; padding: 3px 10px; border-radius: 12px; font-weight: 700; background: rgba(0, 208, 156, 0.15); color: var(--primary); border: 1px solid var(--primary);">
+          READY
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 10px;">
+        <div style="background: #090e17; border: 1px solid #1e293b; border-radius: 6px; padding: 8px 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 11px; color: #94a3b8;">🟢 Buy Call (CE) Trigger</span>
+          </div>
+          <div style="font-size: 13px; font-weight: 700; color: #34d399;" id="winCeTrigger">Cross above ₹--</div>
+          <div style="font-size: 11px; color: #93c5fd; margin-top: 3px;" id="winCeWatch">Groww Strike: Preparing strike...</div>
+        </div>
+        <div style="background: #090e17; border: 1px solid #1e293b; border-radius: 6px; padding: 8px 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 11px; color: #94a3b8;">🔴 Buy Put (PE) Trigger</span>
+          </div>
+          <div style="font-size: 13px; font-weight: 700; color: #f87171;" id="winPeTrigger">Drop below ₹--</div>
+          <div style="font-size: 11px; color: #fca5a5; margin-top: 3px;" id="winPeWatch">Groww Strike: Preparing strike...</div>
+        </div>
+        <div style="background: #090e17; border: 1px solid #1e293b; border-radius: 6px; padding: 8px 12px;">
+          <div style="font-size: 11px; color: #94a3b8;">🛡️ AI Capital Protection</div>
+          <div style="font-size: 13px; font-weight: 600; color: #fbbf24;" id="winShield">ADX Trend & Chop Filter Active</div>
+        </div>
+      </div>
+      <div id="winReasonText" style="font-size: 11px; color: #94a3b8; margin-top: 8px; border-top: 1px solid #1e293b; padding-top: 6px;">
+        ⚡ <strong>Status:</strong> Ready & monitoring live 5m candles.
+      </div>
+    </div>
+
+    <!-- Live Trade Decision Table (Exact Groww Contracts) -->
+    <div class="card" style="margin-top: 14px; background: rgba(13, 19, 31, 0.95); border: 1px solid #1e293b; border-radius: 10px; padding: 14px;">
+      <div class="card-title" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+        <span>🎯 Live Trade Decision Table (Which Contract to Pick on Groww)</span>
+        <span style="font-size:11px; color:var(--primary); font-weight:bold;">PRE-CALCULATED FOR ₹5,000 CAPITAL</span>
+      </div>
+      <div style="overflow-x: auto;">
+        <table style="width:100%; border-collapse:collapse; font-size:12px; min-width: 820px;">
+          <thead>
+            <tr style="background: rgba(30, 41, 59, 0.6); text-align: left; border-bottom: 1px solid #334155;">
+              <th style="padding: 10px 8px;">Setup</th>
+              <th style="padding: 10px 8px;">Exact Groww Contract Name</th>
+              <th style="padding: 10px 8px;">Option Price (LTP)</th>
+              <th style="padding: 10px 8px;">1 Lot Cost (Buffer)</th>
+              <th style="padding: 10px 8px;">Stop-Loss (SL -18%)</th>
+              <th style="padding: 10px 8px;">Target 1 (+35%)</th>
+              <th style="padding: 10px 8px;">Target 2 (+50%)</th>
+              <th style="padding: 10px 8px;">When to Buy (Spot Trigger)</th>
+              <th style="padding: 10px 8px;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom: 1px solid #1f2937;">
+              <td style="padding: 12px 8px;"><span style="background: rgba(239, 68, 68, 0.2); color: #f87171; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 11px;">🔴 Put (PE)</span></td>
+              <td style="padding: 12px 8px;"><strong style="color: #f87171; font-size: 14px;" id="tblPeSymbol">NIFTY 01 Dec 25200 Put</strong></td>
+              <td style="padding: 12px 8px;"><span style="font-weight: 700; font-size: 14px;" id="tblPeLtp">~₹70.20</span></td>
+              <td style="padding: 12px 8px;">
+                <span style="font-weight: 700; color: #e2e8f0;" id="tblPeCost">₹4,563</span><br>
+                <small style="color: #10b981;" id="tblPeBuffer">Cash Left: ₹437</small>
+              </td>
+              <td style="padding: 12px 8px;">
+                <strong style="color: #ef4444; font-size: 14px;" id="tblPeSL">₹57.56</strong><br>
+                <small style="color: #f87171;" id="tblPeRisk">Max Risk: -₹822</small>
+              </td>
+              <td style="padding: 12px 8px;">
+                <strong style="color: #10b981; font-size: 14px;" id="tblPeTP1">₹94.77</strong><br>
+                <small style="color: #34d399;" id="tblPeProfit1">Gain: +₹1,597</small>
+              </td>
+              <td style="padding: 12px 8px;">
+                <strong style="color: #3b82f6; font-size: 14px;" id="tblPeTP2">₹105.30</strong><br>
+                <small style="color: #93c5fd;" id="tblPeProfit2">Gain: +₹2,282</small>
+              </td>
+              <td style="padding: 12px 8px; color: #fbbf24; font-size: 12px;" id="tblPeWhen">When Spot drops below trigger</td>
+              <td style="padding: 12px 8px;"><button onclick="copyContract('PE')" style="background: rgba(239, 68, 68, 0.3); border: 1px solid #ef4444; color: #fff; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: bold; white-space: nowrap;">📋 Copy Name</button></td>
+            </tr>
+            <tr>
+              <td style="padding: 12px 8px;"><span style="background: rgba(16, 185, 129, 0.2); color: #34d399; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 11px;">🟢 Call (CE)</span></td>
+              <td style="padding: 12px 8px;"><strong style="color: #34d399; font-size: 14px;" id="tblCeSymbol">NIFTY 01 Dec 26350 Call</strong></td>
+              <td style="padding: 12px 8px;"><span style="font-weight: 700; font-size: 14px;" id="tblCeLtp">~₹70.80</span></td>
+              <td style="padding: 12px 8px;">
+                <span style="font-weight: 700; color: #e2e8f0;" id="tblCeCost">₹4,602</span><br>
+                <small style="color: #10b981;" id="tblCeBuffer">Cash Left: ₹398</small>
+              </td>
+              <td style="padding: 12px 8px;">
+                <strong style="color: #ef4444; font-size: 14px;" id="tblCeSL">₹58.06</strong><br>
+                <small style="color: #f87171;" id="tblCeRisk">Max Risk: -₹828</small>
+              </td>
+              <td style="padding: 12px 8px;">
+                <strong style="color: #10b981; font-size: 14px;" id="tblCeTP1">₹95.58</strong><br>
+                <small style="color: #34d399;" id="tblCeProfit1">Gain: +₹1,611</small>
+              </td>
+              <td style="padding: 12px 8px;">
+                <strong style="color: #3b82f6; font-size: 14px;" id="tblCeTP2">₹106.20</strong><br>
+                <small style="color: #93c5fd;" id="tblCeProfit2">Gain: +₹2,301</small>
+              </td>
+              <td style="padding: 12px 8px; color: #fbbf24; font-size: 12px;" id="tblCeWhen">When Spot crosses above trigger</td>
+              <td style="padding: 12px 8px;"><button onclick="copyContract('CE')" style="background: rgba(16, 185, 129, 0.3); border: 1px solid #10b981; color: #fff; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: bold; white-space: nowrap;">📋 Copy Name</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Trade Execution & Selling Rules Blueprint -->
+      <div style="margin-top: 14px; background: rgba(15, 23, 42, 0.75); border: 1px solid #334155; border-radius: 8px; padding: 12px 16px;">
+        <div style="font-weight: 700; font-size: 12px; color: #38bdf8; text-transform: uppercase; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+          <span>📘 Exact Exit & Selling Rules for Groww (When to Sell & Stop-Loss Blueprint)</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; font-size: 12px;">
+          <div style="background: rgba(30, 41, 59, 0.5); padding: 10px; border-radius: 6px; border-left: 3px solid #ef4444;">
+            <div style="color: #f87171; font-weight: bold; margin-bottom: 3px;">1. Stop-Loss Exit (Hard SL -18%)</div>
+            <div style="color: #cbd5e1; line-height: 1.4;">If trade moves against you, sell immediately at <strong style="color:#f87171" id="bpPeSLText">₹43.50</strong> on Groww. Max loss is strictly capped at <strong style="color:#f87171" id="bpPeRiskText">-₹617</strong> (leaving ₹4,383 safe). Never hold past SL!</div>
+          </div>
+          <div style="background: rgba(30, 41, 59, 0.5); padding: 10px; border-radius: 6px; border-left: 3px solid #fbbf24;">
+            <div style="color: #fbbf24; font-weight: bold; margin-bottom: 3px;">2. Zero-Risk Breakeven Lock (+12%)</div>
+            <div style="color: #cbd5e1; line-height: 1.4;">When option gains +12% (touches <strong style="color:#fbbf24" id="bpPeBEText">₹59.40</strong>), immediately edit your Stop-Loss on Groww to your entry price (<strong id="bpPeEntryText">₹53.00</strong>). From here, your risk is <strong style="color:#34d399;">₹0 (Free Trade)</strong>!</div>
+          </div>
+          <div style="background: rgba(30, 41, 59, 0.5); padding: 10px; border-radius: 6px; border-left: 3px solid #10b981;">
+            <div style="color: #34d399; font-weight: bold; margin-bottom: 3px;">3. Target Profit Booking (+35% / +50%)</div>
+            <div style="color: #cbd5e1; line-height: 1.4;">Sell at <strong>Target 1 (<span id="bpPeTP1Text">₹71.55</span>)</strong> for <strong style="color:#34d399;" id="bpPeProfit1Text">+₹1,205 net profit (+35%)</strong>. For strong trending days, hold to <strong>Target 2 (<span id="bpPeTP2Text">₹79.50</span>)</strong> for <strong style="color:#34d399;" id="bpPeProfit2Text">+₹1,722 (+50%)</strong>!</div>
+          </div>
+          <div style="background: rgba(30, 41, 59, 0.5); padding: 10px; border-radius: 6px; border-left: 3px solid #818cf8;">
+            <div style="color: #a5b4fc; font-weight: bold; margin-bottom: 3px;">4. 35-Minute Anti-Theta Rule</div>
+            <div style="color: #cbd5e1; line-height: 1.4;">If neither Target nor SL is triggered within <strong>35 minutes</strong> from entry, exit at market price. This shields your capital from option time decay (theta loss) on non-trending days!</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="font-size: 11px; color: #94a3b8; margin-top: 10px;">
+        💡 <em>Rule: Both strikes are pre-calculated for ₹5,000 capital (1 lot = 65 qty) on today's weekly expiry. You can copy the name right now, search it on Groww, and add it to your watchlist so you are ready!</em>
+      </div>
+    </div>
+
+    <!-- Market Hours / Test Mode Info Banner -->
+    <div id="marketModeBanner" style="background: rgba(30, 41, 59, 0.7); border: 1px solid #334155; border-radius: 10px; padding: 10px 16px; font-size: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#f59e0b;"></span>
+        <span id="marketModeText"><strong>Market Status:</strong> Indian NSE markets trade Mon–Fri 09:15–15:30 IST. When testing on weekends/off-hours, clicking <strong>"Start Live Groww Bot"</strong> runs an interactive live test walkthrough!</span>
+      </div>
+      <div style="font-weight:600; color:var(--primary); font-size:11px;">TEST MODE READY</div>
+    </div>
+
+    <!-- Active AI Bolt Signal Card (Groww Execution Card) -->
+    <div id="signalCard" class="signal-banner">
+      <div class="signal-header">
+        <div>
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span style="font-size: 11px; background: rgba(0,208,156,0.25); color: var(--primary); padding: 3px 8px; border-radius: 4px; font-weight: 700; text-transform: uppercase;">
+              GROWW AI BOLT TRADE TRIGGERED
+            </span>
+            <span id="sigExpiryBadge" style="font-size: 11px; background: rgba(59, 130, 246, 0.25); color: #93c5fd; border: 1px solid #3b82f6; padding: 3px 8px; border-radius: 4px; font-weight: 700;">
+              📅 EXPIRY: ACTIVE WEEKLY
+            </span>
+          </div>
+          <div class="signal-title" id="sigAction" style="margin-top: 4px;">BUY CALL (CE)</div>
+        </div>
+        <div style="text-align: right;">
+          <span style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px;">Tap to Copy for Groww Search:</span>
+          <div class="copy-pill" id="sigCopyBtn" onclick="copyStrike()">Tap to Copy Strike</div>
+        </div>
+      </div>
+
+      <!-- Exact Selection Banner for Groww App -->
+      <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(0,208,156,0.45); border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+        <div>
+          <span style="color: #94a3b8; font-size: 11px; display: block; text-transform: uppercase; font-weight: 700;">Exact Contract on Groww App:</span>
+          <strong style="color: var(--primary); font-size: 16px;" id="sigGrowwContractText">Tap to Copy Strike</strong>
+          <span style="font-size: 12px; color: #cbd5e1; margin-left: 6px;">(Option)</span>
+          <div style="font-size: 11px; color: #f59e0b; margin-top: 2px;">
+            ⚠️ <em>Important: Always select the nearest weekly expiry shown above. Do NOT select later dates!</em>
+          </div>
+        </div>
+        <button onclick="copyStrike()" style="padding: 6px 14px; font-size: 12px; background: var(--primary); color: #000; border-radius: 6px; font-weight: bold; border:none; cursor:pointer;">
+          📋 Copy Full Name
+        </button>
+      </div>
+
+      <div class="signal-grid">
+        <div class="signal-cell">
+          <div class="label">Groww Expiry Date</div>
+          <div class="val" style="color:#93c5fd" id="sigExpiryVal">Active Weekly Expiry</div>
+        </div>
+        <div class="signal-cell">
+          <div class="label">Action on Groww</div>
+          <div class="val" style="color:var(--primary)" id="sigGrowwAction">BUY 1 Lot (65 Qty)</div>
+        </div>
+        <div class="signal-cell">
+          <div class="label">Entry Price</div>
+          <div class="val" id="sigEntry">₹74.00</div>
+        </div>
+        <div class="signal-cell">
+          <div class="label">Stop-Loss (SL)</div>
+          <div class="val" style="color:var(--danger)" id="sigSL">₹60.68 (-18%)</div>
+        </div>
+        <div class="signal-cell">
+          <div class="label">Target Price (TP)</div>
+          <div class="val" style="color:var(--primary)" id="sigTP">₹111.00 (+50%)</div>
+        </div>
+        <div class="signal-cell">
+          <div class="label">Anti-Theta Timer</div>
+          <div class="val" style="color:var(--warning)" id="sigTimer">35m Max Hold</div>
+        </div>
+        <div class="signal-cell">
+          <div class="label">AI Confidence</div>
+          <div class="val" style="color:var(--primary)" id="sigScore">--</div>
+        </div>
+      </div>
+      <div style="margin-top: 12px; font-size: 12px; color: #a7f3d0;" id="sigReason">
+        Confluence: ORB High Breakout + Above VWAP + Supertrend BULLISH + ADX 36.1 + Vol Surge
+      </div>
+    </div>
+
+    <!-- Main Dashboard Grid -->
+    <div class="dashboard-grid">
+      <!-- Left Column: Market & Indicators -->
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="card">
+          <div class="card-title">
+            <span>Live Market Snapshot</span>
+            <span style="font-size: 11px; font-weight: normal;" id="marketLastBar">Last Bar: --:--</span>
+          </div>
+          <div class="metrics-row">
+            <div class="metric-box">
+              <div class="metric-label">NIFTY 50 Spot</div>
+              <div class="metric-val" id="spotVal">--</div>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">Intraday VWAP</div>
+              <div class="metric-val" id="vwapVal">--</div>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">5m Supertrend</div>
+              <div class="metric-val" id="stVal">--</div>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">15m Trend</div>
+              <div class="metric-val" id="htfVal">--</div>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">ADX Trend Strength</div>
+              <div class="metric-val" id="adxVal">--</div>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">ORB Range (09:15-30)</div>
+              <div class="metric-val" style="font-size: 14px;" id="orbVal">-- / --</div>
+            </div>
+          </div>
+
+          <!-- AI Confidence Meter -->
+          <div class="ai-meter-box">
+            <div class="ai-labels">
+              <span>AI Confluence Confidence (Call CE)</span>
+              <span id="scoreCeTxt">0%</span>
+            </div>
+            <div class="ai-bar-wrap">
+              <div class="ai-bar-fill" id="scoreCeBar" style="width: 0%"></div>
+            </div>
+            <div class="ai-labels" style="margin-top: 8px;">
+              <span>AI Confluence Confidence (Put PE)</span>
+              <span id="scorePeTxt">0%</span>
+            </div>
+            <div class="ai-bar-wrap">
+              <div class="ai-bar-fill" id="scorePeBar" style="width: 0%; background: linear-gradient(90deg, #f59e0b, #ef4444);"></div>
+            </div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">
+              ⚡ <strong>AI Bolt Rule:</strong> Trades trigger ONLY when Confidence is ≥ <strong>80%</strong> (09:20–14:45 IST) with Strict Anti-Chop Protection.
+            </div>
+          </div>
+        </div>
+
+        <!-- Active Open Position Card -->
+        <div class="card" id="positionCard" style="display: none;">
+          <div class="card-title">
+            <span>Live Position Tracking</span>
+            <span id="posStatusBadge" style="color:var(--primary); font-size:11px; font-weight:bold;">ACTIVE</span>
+          </div>
+          <div class="position-box">
+            <div class="pos-header">
+              <div>
+                <strong style="font-size: 16px;" id="posSymbol">NIFTY 26100 CE</strong>
+                <div style="font-size: 12px; color: var(--text-muted);" id="posSub">Entry: ₹63.26 | 1 Lot (65 Qty)</div>
+              </div>
+              <div class="pos-pnl" id="posPnL">₹+0.00</div>
+            </div>
+            <div class="metrics-row" style="margin-top: 10px;">
+              <div class="metric-box">
+                <div class="metric-label">Current LTP</div>
+                <div class="metric-val" id="posLTP">₹--</div>
+              </div>
+              <div class="metric-box">
+                <div class="metric-label">Stop-Loss (SL)</div>
+                <div class="metric-val" style="color:var(--danger)" id="posSL">₹--</div>
+              </div>
+              <div class="metric-box">
+                <div class="metric-label">Target (TP)</div>
+                <div class="metric-val" style="color:var(--primary)" id="posTP">₹--</div>
+              </div>
+              <div class="metric-box">
+                <div class="metric-label">Time Remaining</div>
+                <div class="metric-val" style="color:var(--warning)" id="posTimeLeft">35m</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Activity Log -->
+        <div class="card">
+          <div class="card-title">Live Bot Activity Feed</div>
+          <div class="log-box" id="logBox">
+            <div class="log-entry"><span class="log-time">System</span><span class="log-info">Dashboard loaded. Click "Start Live Groww Bot" or "Groww Pre-Check" to begin.</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Today's PnL & Trade Journal -->
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="card">
+          <div class="card-title">Today's Performance</div>
+          <div class="pnl-big" id="pnlTotal">₹+0.00</div>
+          <div class="stat-row">
+            <span style="color:var(--text-muted)">Trades Taken</span>
+            <strong id="statTrades">0 / 1</strong>
+          </div>
+          <div class="stat-row">
+            <span style="color:var(--text-muted)">Win / Loss</span>
+            <strong id="statWinLoss">0W - 0L</strong>
+          </div>
+          <div class="stat-row">
+            <span style="color:var(--text-muted)">Gross P&L</span>
+            <strong id="statGross">₹+0.00</strong>
+          </div>
+          <div class="stat-row">
+            <span style="color:var(--text-muted)">Est. Brokerage & Taxes</span>
+            <strong style="color:var(--danger)" id="statCharges">₹0.00</strong>
+          </div>
+          <div class="stat-row">
+            <span style="color:var(--text-muted)">Session Status</span>
+            <strong style="color:var(--primary)" id="statStatus">Ready</strong>
+          </div>
+        </div>
+
+        <!-- Trade History -->
+        <div class="card" style="flex: 1;">
+          <div class="card-title">Today's Closed Trades</div>
+          <div style="overflow-x: auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Strike</th>
+                  <th>Entry</th>
+                  <th>Exit</th>
+                  <th>Net P&L</th>
+                </tr>
+              </thead>
+              <tbody id="tradeTableBody">
+                <tr><td colspan="4" style="text-align:center; color:#64748b; padding:20px;">No trades yet today</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Audio alert using Web Audio API (zero external mp3 file needed!)
+    function playChime() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(587.33, now); // D5
+        osc.frequency.exponentialRampToValueAtTime(880.0, now + 0.15); // A5
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+        osc.start(now);
+        osc.stop(now + 0.6);
+      } catch (e) {}
+    }
+
+    let lastKnownSignal = null;
+
+    function copyStrike() {
+      const text = document.getElementById("sigCopyBtn").innerText;
+      navigator.clipboard.writeText(text).then(() => {
+        alert("✅ Copied to clipboard: " + text + "\n\n👉 On Groww Search:\nPaste this into search and tap the matching contract with the nearest expiry date!");
+      });
+    }
+
+    function copyContract(type) {
+      const elId = type === "PE" ? "tblPeSymbol" : "tblCeSymbol";
+      const text = document.getElementById(elId).innerText;
+      navigator.clipboard.writeText(text).then(() => {
+        alert("✅ Copied to clipboard: " + text + "\n\n👉 On Groww Search:\nPaste this into search to add it to your watchlist or execute when triggered!");
+      });
+    }
+
+    function doAction(actionName) {
+      try {
+        const dummyCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (dummyCtx.state === "suspended") {
+          dummyCtx.resume();
+        }
+      } catch (e) {}
+
+      fetch("/api/action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: actionName })
+      }).then(() => pollStatus());
+    }
+
+    function updateClock() {
+      const now = new Date();
+      document.getElementById("liveClock").innerText = now.toLocaleTimeString("en-GB") + " IST";
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    function pollStatus() {
+      fetch("/api/status")
+        .then(r => r.json())
+        .then(data => render(data))
+        .catch(() => {});
+    }
+    setInterval(pollStatus, 1500);
+    pollStatus();
+
+    function render(data) {
+      // Status badge and buttons
+      const badge = document.getElementById("statusBadge");
+      const btnStart = document.getElementById("btnStart");
+      const btnScan = document.getElementById("btnScan");
+      const btnStop = document.getElementById("btnStop");
+      const btnCheck = document.getElementById("btnCheck");
+      const btnDemo = document.getElementById("btnDemo");
+
+      if (data.running) {
+        badge.className = "status-badge live";
+        document.getElementById("statusText").innerText = data.mode;
+        btnStart.disabled = true;
+        if (btnScan) btnScan.disabled = true;
+        btnStop.disabled = false;
+        btnCheck.disabled = true;
+        btnDemo.disabled = true;
+      } else {
+        badge.className = "status-badge";
+        document.getElementById("statusText").innerText = "IDLE";
+        btnStart.disabled = false;
+        if (btnScan) btnScan.disabled = false;
+        btnStop.disabled = true;
+        btnCheck.disabled = false;
+        btnDemo.disabled = false;
+      }
+
+      // Market Data
+      const m = data.market || {};
+      if (m.spot > 0) {
+        document.getElementById("spotVal").innerText = "₹" + m.spot.toFixed(2);
+        document.getElementById("vwapVal").innerText = "₹" + (m.vwap || 0).toFixed(2);
+        
+        const stEl = document.getElementById("stVal");
+        stEl.innerText = (m.direction || "NEUTRAL");
+        stEl.className = "metric-val " + (m.direction === "BULLISH" ? "bullish" : m.direction === "BEARISH" ? "bearish" : "neutral");
+
+        const htfEl = document.getElementById("htfVal");
+        htfEl.innerText = (m.htf_trend || "NEUTRAL");
+        htfEl.className = "metric-val " + (m.htf_trend === "BULLISH" ? "bullish" : m.htf_trend === "BEARISH" ? "bearish" : "neutral");
+
+        document.getElementById("adxVal").innerText = (m.adx || 0).toFixed(1) + (m.adx >= 20 ? " (Trend)" : " (Chop)");
+        document.getElementById("orbVal").innerText = (m.orb_high ? "H:" + m.orb_high : "--") + " / " + (m.orb_low ? "L:" + m.orb_low : "--");
+        document.getElementById("marketLastBar").innerText = "Last Bar: " + (m.last_bar || "--:--");
+      }
+
+      // Window Info & Dynamic Breakout Triggers
+      if (m.window) {
+        document.getElementById("winTimeRange").innerText = m.window + " (Spot: ₹" + (m.spot || 0).toFixed(2) + ")";
+        const winBadge = document.getElementById("winStatusBadge");
+        if (m.is_choppy) {
+          winBadge.innerText = "🛡️ CHOP DETECTED (NO ENTRY)";
+          winBadge.style.background = "rgba(239, 68, 68, 0.15)";
+          winBadge.style.color = "#f87171";
+          winBadge.style.borderColor = "#ef4444";
+          document.getElementById("winShield").innerText = "Chop Trap Blocked (ADX < 20)";
+        } else {
+          winBadge.innerText = "🚀 TREND READY (" + (m.direction || "MOMENTUM") + ")";
+          winBadge.style.background = "rgba(0, 208, 156, 0.15)";
+          winBadge.style.color = "var(--primary)";
+          winBadge.style.borderColor = "var(--primary)";
+          document.getElementById("winShield").innerText = "Strong Trend Confirmed (ADX ≥ 20)";
+        }
+        if (m.ce_trigger > 0) {
+          document.getElementById("winCeTrigger").innerText = "Cross above ₹" + m.ce_trigger.toFixed(2);
+        } else {
+          document.getElementById("winCeTrigger").innerText = "Awaiting 09:30 AM Breakout";
+        }
+        if (m.pe_trigger > 0) {
+          document.getElementById("winPeTrigger").innerText = "Drop below ₹" + m.pe_trigger.toFixed(2);
+        } else {
+          document.getElementById("winPeTrigger").innerText = "Awaiting 09:30 AM Breakout";
+        }
+
+        // Update Live Trade Decision Table
+        const currentSpot = m.spot || 25350;
+        const atm = Math.round(currentSpot / 50) * 50;
+        const expShort = m.nearest_expiry_short || "01 Dec";
+        const expFull = m.nearest_expiry || "01 Dec 2026";
+        const hdrExpEl = document.getElementById("hdrExpiryText");
+        if (hdrExpEl) hdrExpEl.innerText = expFull;
+        const peSymbol = m.pe_contract || ("NIFTY " + expShort + " " + atm + " Put");
+        const ceSymbol = m.ce_contract || ("NIFTY " + expShort + " " + (atm + 50) + " Call");
+        const peLtpVal = m.pe_ltp || 53.0;
+        const ceLtpVal = m.ce_ltp || 62.0;
+
+        document.getElementById("winCeWatch").innerHTML = "Groww Strike: <strong>" + ceSymbol + "</strong> (~₹" + ceLtpVal.toFixed(2) + ")";
+        document.getElementById("winPeWatch").innerHTML = "Groww Strike: <strong>" + peSymbol + "</strong> (~₹" + peLtpVal.toFixed(2) + ")";
+
+        const peSLVal = (peLtpVal * 0.82).toFixed(2);
+        const peRiskVal = Math.round((peLtpVal - peSLVal) * 65);
+        const peTP1Val = (peLtpVal * 1.35).toFixed(2);
+        const peProfit1Val = Math.round((peTP1Val - peLtpVal) * 65);
+        const peTP2Val = (peLtpVal * 1.50).toFixed(2);
+        const peProfit2Val = Math.round((peTP2Val - peLtpVal) * 65);
+        const peCostVal = Math.round(peLtpVal * 65);
+        const peBufferVal = Math.max(0, 5000 - peCostVal);
+        const peBEVal = (peLtpVal * 1.12).toFixed(2);
+
+        const ceSLVal = (ceLtpVal * 0.82).toFixed(2);
+        const ceRiskVal = Math.round((ceLtpVal - ceSLVal) * 65);
+        const ceTP1Val = (ceLtpVal * 1.35).toFixed(2);
+        const ceProfit1Val = Math.round((ceTP1Val - ceLtpVal) * 65);
+        const ceTP2Val = (ceLtpVal * 1.50).toFixed(2);
+        const ceProfit2Val = Math.round((ceTP2Val - ceLtpVal) * 65);
+        const ceCostVal = Math.round(ceLtpVal * 65);
+        const ceBufferVal = Math.max(0, 5000 - ceCostVal);
+        const ceBEVal = (ceLtpVal * 1.12).toFixed(2);
+
+        const tblPeSymEl = document.getElementById("tblPeSymbol");
+        if (tblPeSymEl) {
+          tblPeSymEl.innerText = peSymbol;
+          document.getElementById("tblPeLtp").innerText = "~₹" + peLtpVal.toFixed(2);
+          document.getElementById("tblPeCost").innerText = "₹" + peCostVal.toLocaleString("en-IN");
+          if (document.getElementById("tblPeBuffer")) document.getElementById("tblPeBuffer").innerText = "Cash Left: ₹" + peBufferVal.toLocaleString("en-IN");
+          if (document.getElementById("tblPeSL")) document.getElementById("tblPeSL").innerText = "₹" + peSLVal;
+          if (document.getElementById("tblPeRisk")) document.getElementById("tblPeRisk").innerText = "Max Risk: -₹" + peRiskVal;
+          if (document.getElementById("tblPeTP1")) document.getElementById("tblPeTP1").innerText = "₹" + peTP1Val;
+          if (document.getElementById("tblPeProfit1")) document.getElementById("tblPeProfit1").innerText = "Gain: +₹" + peProfit1Val;
+          if (document.getElementById("tblPeTP2")) document.getElementById("tblPeTP2").innerText = "₹" + peTP2Val;
+          if (document.getElementById("tblPeProfit2")) document.getElementById("tblPeProfit2").innerText = "Gain: +₹" + peProfit2Val;
+
+          if (document.getElementById("bpPeSLText")) document.getElementById("bpPeSLText").innerText = "₹" + peSLVal;
+          if (document.getElementById("bpPeRiskText")) document.getElementById("bpPeRiskText").innerText = "-₹" + peRiskVal;
+          if (document.getElementById("bpPeBEText")) document.getElementById("bpPeBEText").innerText = "₹" + peBEVal;
+          if (document.getElementById("bpPeEntryText")) document.getElementById("bpPeEntryText").innerText = "₹" + peLtpVal.toFixed(2);
+          if (document.getElementById("bpPeTP1Text")) document.getElementById("bpPeTP1Text").innerText = "₹" + peTP1Val;
+          if (document.getElementById("bpPeProfit1Text")) document.getElementById("bpPeProfit1Text").innerText = "+₹" + peProfit1Val + " net profit (+35%)";
+          if (document.getElementById("bpPeTP2Text")) document.getElementById("bpPeTP2Text").innerText = "₹" + peTP2Val;
+          if (document.getElementById("bpPeProfit2Text")) document.getElementById("bpPeProfit2Text").innerText = "+₹" + peProfit2Val + " (+50%)";
+
+          if (m.pe_trigger > 0) {
+            document.getElementById("tblPeWhen").innerText = "When Spot drops below ₹" + m.pe_trigger.toFixed(2);
+          } else {
+            document.getElementById("tblPeWhen").innerText = "When Spot drops below 09:15–09:30 Low";
+          }
+        }
+
+        const tblCeSymEl = document.getElementById("tblCeSymbol");
+        if (tblCeSymEl) {
+          tblCeSymEl.innerText = ceSymbol;
+          document.getElementById("tblCeLtp").innerText = "~₹" + ceLtpVal.toFixed(2);
+          document.getElementById("tblCeCost").innerText = "₹" + ceCostVal.toLocaleString("en-IN");
+          if (document.getElementById("tblCeBuffer")) document.getElementById("tblCeBuffer").innerText = "Cash Left: ₹" + ceBufferVal.toLocaleString("en-IN");
+          if (document.getElementById("tblCeSL")) document.getElementById("tblCeSL").innerText = "₹" + ceSLVal;
+          if (document.getElementById("tblCeRisk")) document.getElementById("tblCeRisk").innerText = "Max Risk: -₹" + ceRiskVal;
+          if (document.getElementById("tblCeTP1")) document.getElementById("tblCeTP1").innerText = "₹" + ceTP1Val;
+          if (document.getElementById("tblCeProfit1")) document.getElementById("tblCeProfit1").innerText = "Gain: +₹" + ceProfit1Val;
+          if (document.getElementById("tblCeTP2")) document.getElementById("tblCeTP2").innerText = "₹" + ceTP2Val;
+          if (document.getElementById("tblCeProfit2")) document.getElementById("tblCeProfit2").innerText = "Gain: +₹" + ceProfit2Val;
+
+          if (m.ce_trigger > 0) {
+            document.getElementById("tblCeWhen").innerText = "When Spot crosses above ₹" + m.ce_trigger.toFixed(2);
+          } else {
+            document.getElementById("tblCeWhen").innerText = "When Spot crosses above 09:15–09:30 High";
+          }
+        }
+
+        const winReasonEl = document.getElementById("winReasonText");
+        if (winReasonEl) {
+          if (m.hold_reason) {
+            winReasonEl.innerHTML = "🛡️ <strong>Current Filter:</strong> " + m.hold_reason;
+          } else if (m.window_status) {
+            winReasonEl.innerHTML = "⚡ <strong>Status:</strong> " + m.window_status;
+          } else {
+            winReasonEl.innerHTML = "⚡ <strong>Status:</strong> Monitoring 5m candles for high-confidence breakout trigger.";
+          }
+        }
+      }
+
+      // AI Confidence Meters
+      const ceScore = m.ai_score_ce || 0;
+      const peScore = m.ai_score_pe || 0;
+      document.getElementById("scoreCeTxt").innerText = ceScore + "%" + (ceScore >= 80 ? " 🔥 BOLT READY" : "");
+      document.getElementById("scoreCeBar").style.width = ceScore + "%";
+      document.getElementById("scorePeTxt").innerText = peScore + "%" + (peScore >= 80 ? " 🔥 BOLT READY" : "");
+      document.getElementById("scorePeBar").style.width = peScore + "%";
+
+      // Signal Card
+      const sigCard = document.getElementById("signalCard");
+      if (data.active_signal) {
+        const s = data.active_signal;
+        const expFull = m.nearest_expiry || "01 Dec 2026";
+        sigCard.className = "signal-banner active";
+        document.getElementById("sigAction").innerText = s.action === "BUY_CE" ? "BUY CALL (CE)" : "BUY PUT (PE)";
+        document.getElementById("sigAction").style.color = s.action === "BUY_CE" ? "var(--primary)" : "var(--danger)";
+        document.getElementById("sigCopyBtn").innerText = s.contract;
+        if (document.getElementById("sigGrowwContractText")) {
+          document.getElementById("sigGrowwContractText").innerText = s.contract;
+        }
+        if (document.getElementById("sigExpiryBadge")) {
+          document.getElementById("sigExpiryBadge").innerText = "📅 EXPIRY: " + (s.expiry || expFull).toUpperCase();
+        }
+        if (document.getElementById("sigExpiryVal")) {
+          document.getElementById("sigExpiryVal").innerText = s.expiry || expFull;
+        }
+        document.getElementById("sigGrowwAction").innerText = `BUY ${s.lots} Lot (${s.quantity} Qty)`;
+        document.getElementById("sigEntry").innerText = "₹" + (s.entry_price || 0).toFixed(2);
+        document.getElementById("sigSL").innerText = "₹" + (s.stop_loss || 0).toFixed(2);
+        document.getElementById("sigTP").innerText = "₹" + (s.target || 0).toFixed(2);
+        const sigScoreEl = document.getElementById("sigScore");
+        if (sigScoreEl) sigScoreEl.innerText = (s.score || 0) + "%";
+        document.getElementById("sigReason").innerText = s.reason || "";
+
+        // Play chime once when a new signal triggers
+        if (!lastKnownSignal || lastKnownSignal.timestamp !== s.timestamp) {
+          lastKnownSignal = s;
+          playChime();
+        }
+      } else {
+        sigCard.className = "signal-banner";
+      }
+
+      // Active Position Card
+      const posCard = document.getElementById("positionCard");
+      if (data.active_position) {
+        posCard.style.display = "block";
+        const p = data.active_position;
+        document.getElementById("posSymbol").innerText = p.symbol;
+        document.getElementById("posSub").innerText = `Entry: ₹${p.entry_price.toFixed(2)} | Qty: ${p.quantity} (${p.lots} Lot)`;
+        
+        const pnlEl = document.getElementById("posPnL");
+        const pnl = p.unrealized_pnl || 0;
+        pnlEl.innerText = (pnl >= 0 ? "₹+" : "₹") + pnl.toFixed(2);
+        pnlEl.style.color = pnl >= 0 ? "var(--primary)" : "var(--danger)";
+
+        document.getElementById("posLTP").innerText = "₹" + (p.current_ltp || 0).toFixed(2);
+        document.getElementById("posSL").innerText = "₹" + (p.stop_loss || 0).toFixed(2) + (p.trailing_active ? " (Trailing)" : p.breakeven_active ? " (Breakeven)" : "");
+        document.getElementById("posTP").innerText = "₹" + (p.target || 0).toFixed(2);
+        document.getElementById("posTimeLeft").innerText = (p.mins_left !== undefined ? p.mins_left + "m left" : "35m");
+      } else {
+        posCard.style.display = "none";
+      }
+
+      // Performance Stats
+      const pnl = data.pnl || {};
+      const netPnlEl = document.getElementById("pnlTotal");
+      const netPnl = pnl.net_pnl || 0;
+      netPnlEl.innerText = (netPnl >= 0 ? "₹+" : "₹") + netPnl.toFixed(2);
+      netPnlEl.style.color = netPnl >= 0 ? "var(--primary)" : "var(--danger)";
+
+      document.getElementById("statTrades").innerText = `${pnl.trade_count || 0} / ${data.max_trades || 1}`;
+      document.getElementById("statWinLoss").innerText = `${pnl.wins || 0}W - ${pnl.losses || 0}L`;
+      document.getElementById("statGross").innerText = (pnl.gross_pnl >= 0 ? "₹+" : "₹") + (pnl.gross_pnl || 0).toFixed(2);
+      document.getElementById("statCharges").innerText = "₹" + (pnl.charges || 0).toFixed(2);
+      document.getElementById("statStatus").innerText = pnl.status || "Ready";
+
+      // Closed Trades Table
+      const tb = document.getElementById("tradeTableBody");
+      if (pnl.closed_trades && pnl.closed_trades.length > 0) {
+        tb.innerHTML = pnl.closed_trades.map(t => `
+          <tr>
+            <td><strong>${t.symbol}</strong></td>
+            <td>${t.entry}</td>
+            <td>${t.exit}</td>
+            <td style="color:${t.net_pnl.includes('+') ? 'var(--primary)' : 'var(--danger)'}; font-weight:bold;">${t.net_pnl}</td>
+          </tr>
+        `).join("");
+      }
+
+      // Logs Box
+      const logBox = document.getElementById("logBox");
+      if (data.logs && data.logs.length > 0) {
+        logBox.innerHTML = data.logs.map(l => `
+          <div class="log-entry">
+            <span class="log-time">${l.time}</span>
+            <span class="log-${l.level || 'info'}">${l.text}</span>
+          </div>
+        `).join("");
+        logBox.scrollTop = logBox.scrollHeight;
+      }
+    }
+  </script>
+</body>
+</html>

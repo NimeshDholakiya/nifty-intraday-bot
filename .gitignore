@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Secrets and Local Configurations (DO NOT REMOVE)
+.env
+*.env
+!.env.example
+
+# Logs & Runtime data
+logs/
+*.log
+trade_journal_*.csv
+
+# System and editor metadata
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

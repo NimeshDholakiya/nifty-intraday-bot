@@ -1,0 +1,7 @@
+# Only required for live Angel One SmartAPI connectivity (--mode live / --mode check-angel).
+# Demo, backtest, and unit tests run with Python standard library only.
+smartapi-python>=1.5.5
+pyotp>=2.9.0
+logzero>=1.7.0
+requests>=2.31.0
+websocket-client>=1.7.0
